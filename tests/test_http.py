@@ -35,10 +35,12 @@ class TestResponse:
         response = http.parse_response(b"HTTP/1.1 200 OK")
 
         assert_that(response.ok)
+        assert_that(response.status, equal_to(200))
         assert_that(response.status_text, equal_to("OK"))
 
     def test_error_status_code(self):
         response = http.parse_response(b"HTTP/1.1 404 Not Found")
 
         assert_that(not response.ok)
+        assert_that(response.status, equal_to(404))
         assert_that(response.status_text, equal_to("Not Found"))

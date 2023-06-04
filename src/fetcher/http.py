@@ -43,8 +43,9 @@ class Response:
             options = ResponseOptions()
 
         self.body = body
-        self.ok = options.status == Status.OK
+        self.status = options.status
         self.status_text = options.status_text
+        self.ok = self.status == Status.OK
 
 
 def parse_response(data: bytes) -> Response:

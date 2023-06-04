@@ -43,4 +43,5 @@ async def test_fetch_http_url(server: FakeServer):
         ),
     )
     assert_that(response.status_text, equal_to("OK"))
+    assert_that(response.status, equal_to(200))
     assert_that(response.ok)

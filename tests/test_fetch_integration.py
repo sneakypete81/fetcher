@@ -19,7 +19,7 @@ class FakeServer:
         return self._server.sockets[0].getsockname()[1]
 
     async def _on_connect(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
-        self.request_data = await reader.read(1024)
+        self.request_data = await reader.read()
         writer.write(self.response_data)
         writer.close()
 

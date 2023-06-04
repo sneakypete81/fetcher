@@ -56,12 +56,39 @@ class Response:
         self.ok = self.status == Status.OK
 
 
-def parse_response(data: bytes) -> Response:
-    if not data:
-        msg = "Response is empty"
-        raise HttpError(msg)
+class ResponseParser:
+    def __init__(self):
+        self.finished = False
+        self._in_body = False
+        self._prefix = bytes([])
+        self._body = bytes([])
+        self._options = ResponseOptions()
 
-    prefix, body = data.split(b"\r\n\r\n", maxsplit=1)
+    def push_fragment(self, data: bytes) -> None:
+        if self._in_body:
+            self._push_body_fragment(data)
+        else:
+            self._push_prefix_fragment(data)
+
+    def response(self) -> Response:
+        return Response(options=self._options, body=self._body)
+
+    def _push_prefix_fragment(self, data: bytes) -> None:
+        self._prefix += data
+
+        if b"\r\n\r\n" in self._prefix:
+            self._in_body = True
+            self._prefix, body_data = self._prefix.split(b"\r\n\r\n", maxsplit=1)
+
+            self._options = _parse_prefix(self._prefix)
+            self._push_body_fragment(body_data)
+
+    def _push_body_fragment(self, data: bytes) -> None:
+        self._body += data
+        self.finished = _finished_parsing(headers=self._options.headers, body=self._body)
+
+
+def _parse_prefix(prefix) -> ResponseOptions:
     trace("<", prefix)
     trace("<", "\r\n")
 
@@ -75,8 +102,7 @@ def parse_response(data: bytes) -> Response:
         msg = "Only HTTP/1.1 is supported"
         raise HttpError(msg)
 
-    options = ResponseOptions(status=int(status), status_text=status_text.decode("ascii"), headers=headers)
-    return Response(options=options, body=body)
+    return ResponseOptions(status=int(status), status_text=status_text.decode("ascii"), headers=headers)
 
 
 def _parse_headers(lines: List[bytes]) -> Dict[str, str]:
@@ -86,3 +112,10 @@ def _parse_headers(lines: List[bytes]) -> Dict[str, str]:
         headers[key.strip().decode("ascii")] = value.strip().decode("ascii")
 
     return headers
+
+
+def _finished_parsing(headers, body):
+    if "Content-Length" in headers:
+        if len(body) >= int(headers["Content-Length"]):
+            return True
+    return False

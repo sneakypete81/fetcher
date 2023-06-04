@@ -1,7 +1,9 @@
 import asyncio
 
-from fetcher.http import Request, Response, parse_response
+from fetcher.http import Request, Response, ResponseParser
 from fetcher.trace import trace
+
+FRAGMENT_SIZE = 1024
 
 
 async def fetch(resource: str) -> Response:
@@ -12,6 +14,10 @@ async def fetch(resource: str) -> Response:
     trace(">", request.data)
     writer.write(request.data)
     writer.write_eof()
-    data = await reader.read()
 
-    return parse_response(data)
+    parser = ResponseParser()
+    while True:
+        fragment = await reader.read(FRAGMENT_SIZE)
+        parser.push_fragment(fragment)
+        if parser.finished or reader.at_eof():
+            return parser.response()

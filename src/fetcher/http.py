@@ -50,6 +50,10 @@ class Response:
 
 def parse_response(data: bytes) -> Response:
     lines = data.splitlines()
+    if not lines:
+        msg = "Response is empty:"
+        raise ValueError(msg)
+
     protocol, status, status_text = lines[0].split(b" ", maxsplit=2)
 
     if protocol != b"HTTP/1.1":

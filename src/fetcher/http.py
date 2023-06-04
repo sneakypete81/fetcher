@@ -58,29 +58,28 @@ class Response:
 
 class ResponseParser:
     def __init__(self):
-        self.finished = False
         self._prefix_parser = PrefixParser()
-        self._body = bytes([])
+        self._body_parser = ContentLengthBodyParser({})
         self._options = ResponseOptions()
 
     def push_fragment(self, data: bytes) -> None:
         if self._prefix_parser.finished:
-            self._push_body_fragment(data)
+            self._body_parser.push(data)
         else:
             self._push_prefix_fragment(data)
 
+    def finished(self) -> bool:
+        return self._body_parser.finished()
+
     def response(self) -> Response:
-        return Response(options=self._options, body=self._body)
+        return Response(options=self._options, body=self._body_parser.body)
 
     def _push_prefix_fragment(self, data: bytes) -> None:
         self._prefix_parser.push(data)
         if self._prefix_parser.finished:
             self._options = self._prefix_parser.options()
-            self._push_body_fragment(self._prefix_parser.body_fragment)
-
-    def _push_body_fragment(self, data: bytes) -> None:
-        self._body += data
-        self.finished = _finished_parsing(headers=self._options.headers, body=self._body)
+            self._body_parser = ContentLengthBodyParser(self._options.headers)
+            self._body_parser.push(self._prefix_parser.body_fragment)
 
 
 class PrefixParser:
@@ -123,8 +122,16 @@ class PrefixParser:
         return headers
 
 
-def _finished_parsing(headers, body):
-    if "Content-Length" in headers:
-        if len(body) >= int(headers["Content-Length"]):
-            return True
-    return False
+class ContentLengthBodyParser:
+    def __init__(self, headers):
+        self.headers = headers
+        self.body = b""
+
+    def push(self, data: bytes) -> None:
+        self.body += data
+
+    def finished(self) -> bool:
+        if "Content-Length" in self.headers:
+            if len(self.body) >= int(self.headers["Content-Length"]):
+                return True
+        return False

@@ -84,7 +84,7 @@ class TestResponseParser:
         parser.push_fragment(b"HTTP/1.1 200 OK\r\nContent-Length:4\r\n\r\nBody")
         response = parser.response()
 
-        assert_that(parser.finished)
+        assert_that(parser.finished())
         assert_that(response.body, equal_to(b"Body"))
 
     def test_body_is_parsed_from_multiple_fragments(self):
@@ -93,11 +93,11 @@ class TestResponseParser:
         parser.push_fragment(b" body")
         response = parser.response()
 
-        assert_that(parser.finished)
+        assert_that(parser.finished())
         assert_that(response.body, equal_to(b"Long body"))
 
     def test_parser_not_finished_if_body_is_too_short(self):
         parser = http.ResponseParser()
         parser.push_fragment(b"HTTP/1.1 200 OK\r\nContent-Length:9\r\n\r\nLong")
 
-        assert_that(not parser.finished)
+        assert_that(not parser.finished())

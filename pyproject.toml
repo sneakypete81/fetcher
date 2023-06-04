@@ -40,13 +40,22 @@ fetcher = "fetcher.cli:fetcher"
 path = "src/fetcher/__about__.py"
 
 [tool.hatch.envs.default]
+dependencies = []
+
+[[tool.hatch.envs.all.matrix]]
+python = ["3.7", "3.8", "3.9", "3.10", "3.11"]
+
+[tool.hatch.envs.dev]
 dependencies = [
+  "black~=23.3",
   "coverage[toml]~=7.2",
+  "mypy~=1.0",
   "pyhamcrest~=2.0",
   "pytest~=7.3",
   "pytest-asyncio~=0.21.0",
+  "ruff==0.0.270",
 ]
-[tool.hatch.envs.default.scripts]
+[tool.hatch.envs.dev.scripts]
 test = "pytest {args:tests}"
 test-cov = "coverage run -m pytest {args:tests}"
 cov-report = [
@@ -57,20 +66,6 @@ cov = [
   "test-cov",
   "cov-report",
 ]
-
-[[tool.hatch.envs.all.matrix]]
-python = ["3.7", "3.8", "3.9", "3.10", "3.11"]
-
-[tool.hatch.envs.lint]
-detached = true
-dependencies = [
-  "black~=23.3",
-  "mypy~=1.0",
-  "pyhamcrest~=2.0",
-  "pytest~=7.3",
-  "ruff==0.0.270",
-]
-[tool.hatch.envs.lint.scripts]
 typing = "mypy --install-types --non-interactive {args:src/fetcher tests}"
 style = [
   "ruff {args:.}",
@@ -81,7 +76,7 @@ fmt = [
   "ruff --fix {args:.}",
   "style",
 ]
-all = [
+lint = [
   "style",
   "typing",
 ]

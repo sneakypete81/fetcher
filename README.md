@@ -19,8 +19,8 @@ pip install fetcher
 ## Building
 
 ```console
-hatch run test
-hatch run lint:all
+hatch run dev:test
+hatch run dev:lint
 hatch build
 ```
 

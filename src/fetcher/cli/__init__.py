@@ -11,8 +11,12 @@ from fetcher.__about__ import __version__
 @click.argument("url")
 @click.option("-v", "--verbose", is_flag=True)
 @click.version_option(version=__version__)
-def fetcher(url: str, verbose: bool) -> int:
-    _configure_logging(verbose)
+def fetcher(url: str, verbose: bool) -> None:  # noqa: FBT001
+    _configure_logging()
+    if verbose:
+        logging.basicConfig(level=logging.INFO)
+    else:
+        logging.basicConfig(level=logging.WARNING)
 
     response = asyncio.run(fetch(url))
 
@@ -23,12 +27,7 @@ def fetcher(url: str, verbose: bool) -> int:
     click.echo("Ok")
 
 
-def _configure_logging(verbose: bool):
-    if verbose:
-        logging.basicConfig(level=logging.INFO)
-    else:
-        logging.basicConfig(level=logging.WARNING)
-
+def _configure_logging():
     handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter("%(message)s"))
     logger = logging.getLogger("fetch")

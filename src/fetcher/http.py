@@ -59,13 +59,12 @@ class Response:
 class ResponseParser:
     def __init__(self):
         self.finished = False
-        self._in_body = False
-        self._prefix = bytes([])
+        self._prefix_parser = PrefixParser()
         self._body = bytes([])
         self._options = ResponseOptions()
 
     def push_fragment(self, data: bytes) -> None:
-        if self._in_body:
+        if self._prefix_parser.finished:
             self._push_body_fragment(data)
         else:
             self._push_prefix_fragment(data)
@@ -74,44 +73,54 @@ class ResponseParser:
         return Response(options=self._options, body=self._body)
 
     def _push_prefix_fragment(self, data: bytes) -> None:
-        self._prefix += data
-
-        if b"\r\n\r\n" in self._prefix:
-            self._in_body = True
-            self._prefix, body_data = self._prefix.split(b"\r\n\r\n", maxsplit=1)
-
-            self._options = _parse_prefix(self._prefix)
-            self._push_body_fragment(body_data)
+        self._prefix_parser.push(data)
+        if self._prefix_parser.finished:
+            self._options = self._prefix_parser.options()
+            self._push_body_fragment(self._prefix_parser.body_fragment)
 
     def _push_body_fragment(self, data: bytes) -> None:
         self._body += data
         self.finished = _finished_parsing(headers=self._options.headers, body=self._body)
 
 
-def _parse_prefix(prefix) -> ResponseOptions:
-    trace("<", prefix)
-    trace("<", "\r\n")
+class PrefixParser:
+    def __init__(self):
+        self.prefix = b""
+        self.finished = False
+        self.body_fragment = b""
 
-    prefix_list = prefix.splitlines()
-    start_line = prefix_list[0]
-    headers = _parse_headers(prefix_list[1:])
+    def push(self, data: bytes):
+        prefix = self.prefix + data
+        if b"\r\n\r\n" not in prefix:
+            self.prefix = prefix
+            return
 
-    protocol, status, status_text = start_line.split(b" ", maxsplit=2)
+        self.prefix, self.body_fragment = prefix.split(b"\r\n\r\n", maxsplit=1)
+        self.finished = True
+        trace("<", self.prefix)
+        trace("<", "\r\n")
 
-    if protocol != b"HTTP/1.1":
-        msg = "Only HTTP/1.1 is supported"
-        raise HttpError(msg)
+    def options(self) -> ResponseOptions:
+        prefix_list = self.prefix.splitlines()
+        start_line = prefix_list[0]
+        headers = self._parse_headers(prefix_list[1:])
 
-    return ResponseOptions(status=int(status), status_text=status_text.decode("ascii"), headers=headers)
+        protocol, status, status_text = start_line.split(b" ", maxsplit=2)
 
+        if protocol != b"HTTP/1.1":
+            msg = "Only HTTP/1.1 is supported"
+            raise HttpError(msg)
 
-def _parse_headers(lines: List[bytes]) -> Dict[str, str]:
-    headers = {}
-    for line in lines:
-        key, value = line.split(b":", maxsplit=1)
-        headers[key.strip().decode("ascii")] = value.strip().decode("ascii")
+        return ResponseOptions(status=int(status), status_text=status_text.decode("ascii"), headers=headers)
 
-    return headers
+    @staticmethod
+    def _parse_headers(lines: List[bytes]) -> Dict[str, str]:
+        headers = {}
+        for line in lines:
+            key, value = line.split(b":", maxsplit=1)
+            headers[key.strip().decode("ascii")] = value.strip().decode("ascii")
+
+        return headers
 
 
 def _finished_parsing(headers, body):

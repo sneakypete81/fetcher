@@ -3,6 +3,8 @@ from enum import IntEnum
 from typing import Optional
 from urllib.parse import ParseResult, urlparse
 
+from fetcher.trace import trace
+
 
 class HttpError(Exception):
     pass
@@ -58,6 +60,8 @@ def parse_response(data: bytes) -> Response:
         raise HttpError(msg)
 
     prefix, body = data.split(b"\r\n\r\n", maxsplit=1)
+    trace("<", prefix)
+    trace("<", "\r\n")
 
     prefix_list = prefix.splitlines()
     start_line = prefix_list[0]

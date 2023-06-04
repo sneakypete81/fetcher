@@ -1,10 +1,7 @@
 import asyncio
-import logging
-from typing import Union
 
 from fetcher.http import Request, Response, parse_response
-
-logger = logging.getLogger("fetch")
+from fetcher.trace import trace
 
 
 async def fetch(resource: str) -> Response:
@@ -16,14 +13,5 @@ async def fetch(resource: str) -> Response:
     writer.write(request.data)
     writer.write_eof()
     data = await reader.read()
-    trace("<", data)
 
     return parse_response(data)
-
-
-def trace(prefix: str, data: Union[str, bytes]):
-    if isinstance(data, bytes):
-        data = data.decode("ascii")
-
-    for line in data.splitlines():
-        logger.info(f"{prefix} {line}")

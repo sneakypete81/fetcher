@@ -31,10 +31,10 @@ def server():
 
 @pytest.mark.asyncio
 async def test_fetch_http_url(server: FakeServer):
-    server.response_data = b"Hello"
+    server.response_data = b"HTTP/1.1 200 OK\r\n\r\n"
     await server.start()
 
-    await fetcher.fetch(f"http://localhost:{server.port()}/test/index.html")
+    response = await fetcher.fetch(f"http://localhost:{server.port()}/test/index.html")
 
     assert_that(
         server.request_data,
@@ -42,3 +42,5 @@ async def test_fetch_http_url(server: FakeServer):
             b"GET /test/index.html HTTP/1.1\r\nHost: localhost\r\n\r\n",
         ),
     )
+    assert_that(response.status_text, equal_to("OK"))
+    assert_that(response.ok)

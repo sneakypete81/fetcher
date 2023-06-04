@@ -19,6 +19,16 @@ class TestRequest:
 
         assert_that(request.data, equal_to(b"GET /path/to/file HTTP/1.1\r\nHost: www.example.com\r\n\r\n"))
 
+    def test_with_a_port(self):
+        request = http.Request("www.example.com:1234")
+
+        assert_that(request.port, equal_to(1234))
+
+    def test_with_no_port_defaults_to_port_80(self):
+        request = http.Request("www.example.com")
+
+        assert_that(request.port, equal_to(80))
+
 
 class TestResponse:
     def test_ok_status_code(self):

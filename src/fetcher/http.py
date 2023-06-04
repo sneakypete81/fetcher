@@ -15,14 +15,14 @@ class Request:
             url = urlparse("http://" + resource)
 
         self.hostname = url.hostname
-        self.port = url.port
+        self.port = url.port if url.port else 80
 
         self.data = self._create_request(url)
 
     @staticmethod
     def _create_request(url: ParseResult) -> bytes:
         method = "GET"
-        path = "/" if not url.path else url.path
+        path = url.path if url.path else "/"
 
         data = f"{method} {path} HTTP/1.1\r\n"
         data += f"Host: {url.hostname}\r\n"

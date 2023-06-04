@@ -32,14 +32,14 @@ class TestRequest:
 
 class TestResponse:
     def test_ok_status_code(self):
-        response = http.parse_response(b"HTTP/1.1 200 OK")
+        response = http.parse_response(b"HTTP/1.1 200 OK\r\n\r\n")
 
         assert_that(response.ok)
         assert_that(response.status, equal_to(200))
         assert_that(response.status_text, equal_to("OK"))
 
     def test_error_status_code(self):
-        response = http.parse_response(b"HTTP/1.1 404 Not Found")
+        response = http.parse_response(b"HTTP/1.1 404 Not Found\r\n\r\n")
 
         assert_that(not response.ok)
         assert_that(response.status, equal_to(404))

@@ -4,6 +4,10 @@ from typing import Optional
 from urllib.parse import ParseResult, urlparse
 
 
+class HttpError(Exception):
+    pass
+
+
 class Status(IntEnum):
     OK = 200
 
@@ -52,13 +56,13 @@ def parse_response(data: bytes) -> Response:
     lines = data.splitlines()
     if not lines:
         msg = "Response is empty:"
-        raise ValueError(msg)
+        raise HttpError(msg)
 
     protocol, status, status_text = lines[0].split(b" ", maxsplit=2)
 
     if protocol != b"HTTP/1.1":
         msg = "Only 'HTTP/1.1' is supported"
-        raise ValueError(msg)
+        raise HttpError(msg)
 
     options = ResponseOptions(status=int(status), status_text=status_text.decode("ascii"))
     return Response(options=options)

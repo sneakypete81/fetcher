@@ -1,1 +1,4 @@
-from fetcher.fetch import fetch  # noqa:F401
+from fetcher.fetch import fetch
+from fetcher.http import HttpError
+
+__all__ = ["fetch", "HttpError"]

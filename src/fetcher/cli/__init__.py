@@ -3,7 +3,7 @@ import logging
 
 import click
 
-from fetcher import fetch
+from fetcher import HttpError, fetch
 from fetcher.__about__ import __version__
 
 
@@ -18,7 +18,10 @@ def fetcher(url: str, verbose: bool) -> None:  # noqa: FBT001
     else:
         logging.basicConfig(level=logging.WARNING)
 
-    response = asyncio.run(fetch(url))
+    try:
+        response = asyncio.run(fetch(url))
+    except HttpError as exp:
+        raise click.ClickException(str(exp)) from exp
 
     if not response.ok:
         msg = f"Server returned status '{response.status} {response.status_text}'"

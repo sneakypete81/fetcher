@@ -74,4 +74,4 @@ def parse_response(data: bytes) -> Response:
         raise HttpError(msg)
 
     options = ResponseOptions(status=int(status), status_text=status_text.decode("ascii"))
-    return Response(options=options)
+    return Response(options=options, body=body)

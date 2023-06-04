@@ -44,3 +44,8 @@ class TestResponse:
         assert_that(not response.ok)
         assert_that(response.status, equal_to(404))
         assert_that(response.status_text, equal_to("Not Found"))
+
+    def test_body_is_parsed(self):
+        response = http.parse_response(b"HTTP/1.1 200 OK\r\n\r\nBody")
+
+        assert_that(response.body, equal_to(b"Body"))

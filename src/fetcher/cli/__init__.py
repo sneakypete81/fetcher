@@ -23,11 +23,11 @@ def fetcher(url: str, verbose: bool) -> None:  # noqa: FBT001
     except HttpError as exp:
         raise click.ClickException(str(exp)) from exp
 
+    click.echo(response.body)
+
     if not response.ok:
         msg = f"Server returned status '{response.status} {response.status_text}'"
         raise click.ClickException(msg)
-
-    click.echo("Ok")
 
 
 def _configure_logging():

@@ -1,4 +1,4 @@
-from hamcrest import assert_that, equal_to
+from hamcrest import assert_that, equal_to, has_entries
 
 from fetcher import http
 
@@ -49,3 +49,18 @@ class TestResponse:
         response = http.parse_response(b"HTTP/1.1 200 OK\r\n\r\nBody")
 
         assert_that(response.body, equal_to(b"Body"))
+
+    def test_headers_are_parsed(self):
+        response = http.parse_response(b"HTTP/1.1 200 OK\r\nkey1:value\r\nkey2:value2\r\n\r\n")
+
+        assert_that(response.headers, has_entries(key1="value", key2="value2"))
+
+    def test_headers_with_whitespace_are_parsed(self):
+        response = http.parse_response(b"HTTP/1.1 200 OK\r\nkey: value with spaces \r\n\r\n")
+
+        assert_that(response.headers, has_entries(key="value with spaces"))
+
+    def test_headers_with_colons_are_parsed(self):
+        response = http.parse_response(b"HTTP/1.1 200 OK\r\nkey:value: with:colons\r\n\r\n")
+
+        assert_that(response.headers, has_entries(key="value: with:colons"))

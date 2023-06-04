@@ -1,6 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Optional
+from typing import Dict, List, Optional
 from urllib.parse import ParseResult, urlparse
 
 from fetcher.trace import trace
@@ -41,6 +41,7 @@ class Request:
 class ResponseOptions:
     status: int = Status.OK
     status_text: str = ""
+    headers: Dict[str, str] = field(default_factory=dict)
 
 
 class Response:
@@ -49,6 +50,7 @@ class Response:
             options = ResponseOptions()
 
         self.body = body
+        self.headers = options.headers
         self.status = options.status
         self.status_text = options.status_text
         self.ok = self.status == Status.OK
@@ -65,7 +67,7 @@ def parse_response(data: bytes) -> Response:
 
     prefix_list = prefix.splitlines()
     start_line = prefix_list[0]
-    # headers = prefix_list[1:]
+    headers = _parse_headers(prefix_list[1:])
 
     protocol, status, status_text = start_line.split(b" ", maxsplit=2)
 
@@ -73,5 +75,14 @@ def parse_response(data: bytes) -> Response:
         msg = "Only HTTP/1.1 is supported"
         raise HttpError(msg)
 
-    options = ResponseOptions(status=int(status), status_text=status_text.decode("ascii"))
+    options = ResponseOptions(status=int(status), status_text=status_text.decode("ascii"), headers=headers)
     return Response(options=options, body=body)
+
+
+def _parse_headers(lines: List[bytes]) -> Dict[str, str]:
+    headers = {}
+    for line in lines:
+        key, value = line.split(b":", maxsplit=1)
+        headers[key.strip().decode("ascii")] = value.strip().decode("ascii")
+
+    return headers

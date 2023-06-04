@@ -53,15 +53,20 @@ class Response:
 
 
 def parse_response(data: bytes) -> Response:
-    lines = data.splitlines()
-    if not lines:
-        msg = "Response is empty:"
+    if not data:
+        msg = "Response is empty"
         raise HttpError(msg)
 
-    protocol, status, status_text = lines[0].split(b" ", maxsplit=2)
+    prefix, body = data.split(b"\r\n\r\n", maxsplit=1)
+
+    prefix_list = prefix.splitlines()
+    start_line = prefix_list[0]
+    # headers = prefix_list[1:]
+
+    protocol, status, status_text = start_line.split(b" ", maxsplit=2)
 
     if protocol != b"HTTP/1.1":
-        msg = "Only 'HTTP/1.1' is supported"
+        msg = "Only HTTP/1.1 is supported"
         raise HttpError(msg)
 
     options = ResponseOptions(status=int(status), status_text=status_text.decode("ascii"))

@@ -5,27 +5,27 @@ from fetcher import http
 
 class TestRequest:
     def test_simple(self):
-        request = http.Request("http://www.example.com")
+        request = http.HttpRequest("http://www.example.com")
 
         assert_that(request.data, equal_to(b"GET / HTTP/1.1\r\nHost: www.example.com\r\n\r\n"))
 
     def test_with_no_scheme(self):
-        request = http.Request("www.example.com")
+        request = http.HttpRequest("www.example.com")
 
         assert_that(request.data, equal_to(b"GET / HTTP/1.1\r\nHost: www.example.com\r\n\r\n"))
 
     def test_with_a_path(self):
-        request = http.Request("www.example.com/path/to/file")
+        request = http.HttpRequest("www.example.com/path/to/file")
 
         assert_that(request.data, equal_to(b"GET /path/to/file HTTP/1.1\r\nHost: www.example.com\r\n\r\n"))
 
     def test_with_a_port(self):
-        request = http.Request("www.example.com:1234")
+        request = http.HttpRequest("www.example.com:1234")
 
         assert_that(request.port, equal_to(1234))
 
     def test_with_no_port_defaults_to_port_80(self):
-        request = http.Request("www.example.com")
+        request = http.HttpRequest("www.example.com")
 
         assert_that(request.port, equal_to(80))
 

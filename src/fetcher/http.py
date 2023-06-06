@@ -183,11 +183,12 @@ class ChunkedTransferEncodingBodyParser(BodyParser):
 
             self.body += self._chunk[:size]
             if self._chunk[size : size + 2] != b"\r\n":
-                raise HttpError("Invalid chunk size")
+                msg = "Invalid chunk size"
+                raise HttpError(msg)
 
             self._chunk = self._chunk[size + 2 :]
 
-    def _chunk_size(self) -> int:
+    def _chunk_size(self) -> Optional[int]:
         if self._chunk.count(b"\r\n") == 0:
             return None
         size_line = self._chunk.split(b"\r\n", maxsplit=1)[0]

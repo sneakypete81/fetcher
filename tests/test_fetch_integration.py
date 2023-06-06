@@ -7,10 +7,11 @@ import fetcher
 
 
 class FakeServer:
+    MAX_READ_LENGTH = 1024
+
     def __init__(self):
         self.request_data = b""
         self.response_data = b""
-        self.close_after_write = False
         self._server = None
 
     async def start(self) -> None:
@@ -20,11 +21,8 @@ class FakeServer:
         return self._server.sockets[0].getsockname()[1]
 
     async def _on_connect(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
-        self.request_data = await reader.read()
+        self.request_data = await reader.read(self.MAX_READ_LENGTH)
         writer.write(self.response_data)
-
-        if self.close_after_write:
-            writer.close()
 
 
 @pytest.fixture(scope="module")
@@ -52,11 +50,8 @@ async def test_fetch_http_url_with_content_length(server: FakeServer):
 
 
 @pytest.mark.asyncio
-async def test_fetch_http_url_with_no_headers(server: FakeServer):
-    # Since there are no headers to indicate the body length, we need to close the connection explicitly
-    server.close_after_write = True
-
-    server.response_data = b"HTTP/1.1 200 OK\r\n\r\nBody"
+async def test_fetch_http_url_with_chunked_transfer_encoding(server: FakeServer):
+    server.response_data = b"HTTP/1.1 200 OK\r\nTransfer-Encoding:chunked\r\n\r\n4\r\nBody\r\n0\r\n\r\n"
     await server.start()
 
     response = await fetcher.fetch(f"http://localhost:{server.port()}/test/index.html")

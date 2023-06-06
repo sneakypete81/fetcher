@@ -58,18 +58,17 @@ class Response:
 
 class ResponseParser:
     def __init__(self):
+        self.finished = False
+
         self._prefix_parser = PrefixParser()
-        self._body_parser = ContentLengthBodyParser({})
+        self._body_parser = BodyParser()
         self._options = ResponseOptions()
 
     def push_fragment(self, data: bytes) -> None:
         if self._prefix_parser.finished:
-            self._body_parser.push(data)
+            self._push_body_fragment(data)
         else:
             self._push_prefix_fragment(data)
-
-    def finished(self) -> bool:
-        return self._body_parser.finished()
 
     def response(self) -> Response:
         return Response(options=self._options, body=self._body_parser.body)
@@ -78,8 +77,21 @@ class ResponseParser:
         self._prefix_parser.push(data)
         if self._prefix_parser.finished:
             self._options = self._prefix_parser.options()
-            self._body_parser = ContentLengthBodyParser(self._options.headers)
-            self._body_parser.push(self._prefix_parser.body_fragment)
+
+            if self._options.headers.get("Transfer-Encoding", "") == "chunked":
+                self._body_parser = ChunkedTransferEncodingBodyParser(self._options.headers)
+            elif "Content-Length" in self._options.headers:
+                self._body_parser = ContentLengthBodyParser(self._options.headers)
+            else:
+                self.finished = True
+                return
+
+            self._push_body_fragment(self._prefix_parser.body_fragment)
+
+    def _push_body_fragment(self, data: bytes) -> None:
+        self._body_parser.push(data)
+        if self._body_parser.finished:
+            self.finished = True
 
 
 class PrefixParser:
@@ -122,16 +134,65 @@ class PrefixParser:
         return headers
 
 
-class ContentLengthBodyParser:
+class BodyParser:
+    def __init__(self):
+        self.headers = {}
+        self.body = b""
+        self.finished = False
+
+    def push(self, data: bytes) -> None:
+        raise NotImplementedError
+
+
+class ContentLengthBodyParser(BodyParser):
     def __init__(self, headers):
         self.headers = headers
         self.body = b""
+        self.finished = False
 
     def push(self, data: bytes) -> None:
         self.body += data
 
-    def finished(self) -> bool:
         if "Content-Length" in self.headers:
             if len(self.body) >= int(self.headers["Content-Length"]):
-                return True
-        return False
+                self.finished = True
+
+
+class ChunkedTransferEncodingBodyParser(BodyParser):
+    def __init__(self, headers):
+        self.headers = headers
+        self.body = b""
+        self.finished = False
+        self._chunk = b""
+
+    def push(self, data: bytes) -> None:
+        self._chunk += data
+
+        while True:
+            size = self._chunk_size()
+            if size is None:
+                return
+            if size == 0:
+                self.finished = True
+                return
+
+            if len(self._chunk) < size + 2:
+                return
+
+            self._chunk = self._chunk.split(b"\r\n", maxsplit=1)[1]
+
+            self.body += self._chunk[:size]
+            if self._chunk[size : size + 2] != b"\r\n":
+                raise HttpError("Invalid chunk size")
+
+            self._chunk = self._chunk[size + 2 :]
+
+    def _chunk_size(self) -> int:
+        if self._chunk.count(b"\r\n") == 0:
+            return None
+        size_line = self._chunk.split(b"\r\n", maxsplit=1)[0]
+
+        if size_line.count(b";"):
+            size_line = size_line.split(b";")[0]
+
+        return int(size_line, 16)

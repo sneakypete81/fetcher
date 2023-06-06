@@ -13,11 +13,10 @@ async def fetch(resource: str) -> Response:
 
     trace(">", request.data)
     writer.write(request.data)
-    writer.write_eof()
 
     parser = ResponseParser()
     while True:
         fragment = await reader.read(FRAGMENT_SIZE)
         parser.push_fragment(fragment)
-        if parser.finished() or reader.at_eof():
+        if parser.finished or reader.at_eof():
             return parser.response()

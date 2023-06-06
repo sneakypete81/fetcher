@@ -79,12 +79,14 @@ class TestResponseParser:
 
         assert_that(response.headers, has_entries(key="value: with:colons"))
 
+
+class TestContentLength:
     def test_body_is_parsed(self):
         parser = http.ResponseParser()
         parser.push_fragment(b"HTTP/1.1 200 OK\r\nContent-Length:4\r\n\r\nBody")
         response = parser.response()
 
-        assert_that(parser.finished())
+        assert_that(parser.finished)
         assert_that(response.body, equal_to(b"Body"))
 
     def test_body_is_parsed_from_multiple_fragments(self):
@@ -93,11 +95,50 @@ class TestResponseParser:
         parser.push_fragment(b" body")
         response = parser.response()
 
-        assert_that(parser.finished())
+        assert_that(parser.finished)
         assert_that(response.body, equal_to(b"Long body"))
 
     def test_parser_not_finished_if_body_is_too_short(self):
         parser = http.ResponseParser()
         parser.push_fragment(b"HTTP/1.1 200 OK\r\nContent-Length:9\r\n\r\nLong")
 
-        assert_that(not parser.finished())
+        assert_that(not parser.finished)
+
+
+class TestChunkedTransferEncoding:
+    def test_body_is_parsed(self):
+        parser = http.ResponseParser()
+        parser.push_fragment(b"HTTP/1.1 200 OK\r\nTransfer-Encoding:chunked\r\n\r\n4\r\nBody\r\n0\r\n\r\n")
+        response = parser.response()
+
+        assert_that(parser.finished)
+        assert_that(response.body, equal_to(b"Body"))
+
+    def test_body_is_parsed_from_multiple_chunks(self):
+        parser = http.ResponseParser()
+        parser.push_fragment(b"HTTP/1.1 200 OK\r\nTransfer-Encoding:chunked\r\n\r\n")
+        parser.push_fragment(b"5\r\nLong \r\n")
+        parser.push_fragment(b"4\r\nBody\r\n")
+        parser.push_fragment(b"0\r\n\r\n")
+        response = parser.response()
+
+        assert_that(parser.finished)
+        assert_that(response.body, equal_to(b"Long Body"))
+
+    def test_body_is_parsed_when_chunk_are_split(self):
+        parser = http.ResponseParser()
+        parser.push_fragment(b"HTTP/1.1 200 OK\r\nTransfer-Encoding:chunked\r\n\r\n4\r\nBo")
+        parser.push_fragment(b"dy\r\n0\r\n\r\n")
+        response = parser.response()
+
+        assert_that(parser.finished)
+        assert_that(response.body, equal_to(b"Body"))
+
+    def test_body_is_parsed_when_size_is_split(self):
+        parser = http.ResponseParser()
+        parser.push_fragment(b"HTTP/1.1 200 OK\r\nTransfer-Encoding:chunked\r\n\r\n0")
+        parser.push_fragment(b"E\r\nThis long body\r\n0\r\n\r\n")
+        response = parser.response()
+
+        assert_that(parser.finished)
+        assert_that(response.body, equal_to(b"This long body"))

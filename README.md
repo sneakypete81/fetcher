@@ -9,7 +9,7 @@ An implementation of the [Javascript fetch API](https://developer.mozilla.org/en
 Install [Hatch](https://hatch.pypa.io) and run the following:
 
 ```console
-hatch run fetcher
+hatch run fetcher www.example.com --verbose
 ```
 
 <!-- ```console
